@@ -2,11 +2,14 @@ import gbm
 import payoffs as pf
 import numpy as np
 
-def price_european_call_mc(S0, K, r, sigma, T, n_sims, seed=None):
+def discounted_payoffs_call(S0, K, r, sigma, T, n_sims, seed=None):
     ST = gbm.simulate_ST(S0, r, sigma, T, n_sims, seed)
-    payoffs = pf.call_payoff(ST, K)
-    price = np.exp(-r * T) * payoffs.mean()
-    return price
+    payoff = pf.call_payoff(ST, K)
+    return np.exp(-r * T) * payoff
+
+def price_european_call_mc(S0, K, r, sigma, T, n_sims, seed=None):
+    disc = discounted_payoffs_call(S0, K, r, sigma, T, n_sims, seed)
+    return disc.mean()
 
 def mc_price_CI(discounted_payoffs):
     mean = discounted_payoffs.mean()
@@ -15,3 +18,14 @@ def mc_price_CI(discounted_payoffs):
 
     half_width = 1.96 * std / np.sqrt(n)
     return mean, mean - half_width, mean + half_width
+
+def discounted_payoffs_call_antithetic(S0, K, r, sigma, T, n_sims, seed=None):
+   
+    half = n_sims // 2
+    Z = np.random.default_rng(seed).standard_normal(half)
+
+    ST1 = gbm.simulate_ST_from_Z(S0, r, sigma, T, Z)
+    ST2 = gbm.simulate_ST_from_Z(S0, r, sigma, T, -Z)
+
+    payoff = 0.5 * (pf.call_payoff(ST1, K) + pf.call_payoff(ST2, K))
+    return np.exp(-r * T) * payoff
