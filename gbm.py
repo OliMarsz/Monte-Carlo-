@@ -1,4 +1,5 @@
 import numpy as np
+np.set_printoptions(precision=10, suppress=True)
 
 def simulate_ST(S0, r, sigma, T, n_sims, seed=None):
 
@@ -10,3 +11,8 @@ def simulate_ST(S0, r, sigma, T, n_sims, seed=None):
     diffusion = sigma * np.sqrt(T) * Z
     ST = S0 * np.exp(drift + diffusion)
     return ST
+
+def simulate_ST_from_Z(S0, r, sigma, T, Z):
+    drift = (r - 0.5 * sigma**2) * T
+    diffusion = sigma * (T**0.5) * Z
+    return S0 * np.exp(drift + diffusion)
