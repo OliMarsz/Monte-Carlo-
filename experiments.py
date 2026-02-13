@@ -5,34 +5,33 @@ import numpy as np
 
 
 
-def experiment_nomral(S0, K, r, sigma, T, n_sims,
-                          seed=None, lst=[1000, 5000, 10000, 50000, 100000]):
-    bs_price = bs.bs_call_price(S0, K, r, sigma, T, n_sims, seed=None)
-    print(bs_price)
+def run_experiment(discounted_payoffs_fn, S0,
+                    K, r, sigma, T, 
+                   seed=None, lst=None, benchmark_fn=None,
+                     label = "Confidence Interval",**kwargs):
+    
+    #Use discounted_payoffs_fn to input rather normal or antithetic version
+    
+    #Turn on benchmark for asian call options 
+    
+    if lst is None:
+        lst = [1000, 5000, 10000, 50000, 100000]
+
+    print(f"\n=== {label} ===")
+
+    bench = None
+    if benchmark_fn is not None:
+        bench = benchmark_fn(S0, K, r, sigma, T)
+        print("Benchmark:", bench)
+
     for n in lst:
-        mc_vector = mpc.discounted_payoffs_call(S0, K,
-                                                r, sigma, T, n, seed=seed)
-        mc_CI = mpc.mc_price_CI(mc_vector)
-        print(mc_CI)
-        if bs_price > mc_CI[1] and bs_price < mc_CI[2]:
-            print("In range")
-        else:
-            print("Out of range")
+        disc = discounted_payoffs_fn(S0, K, r, sigma, T, n, seed=seed, **kwargs)
+        mean, lo, hi = mpc.mc_price_CI(disc)
 
-def experiment_antithetic(S0, K, r, sigma, T,
-                          seed=None, lst=[1000, 5000, 10000, 50000, 100000]):
-    bs_price = bs.bs_call_price(S0, K, r, sigma, T)
-    print(bs_price)
-    for n in lst:
-        mc_vector = mpc.discounted_payoffs_call_antithetic(S0, K,
-                                                            r, sigma, T, n, seed=seed)
-        mc_CI = mpc.mc_price_CI(mc_vector)
-        print(mc_CI)
-        if bs_price > mc_CI[1] and bs_price < mc_CI[2]:
-            print("In range")
-        else:
-            print("Out of range")
+        width = hi - lo
+        print(f"n={n:<7d}  mean={mean:.6f}  CI=[{lo:.6f}, {hi:.6f}]  width={width:.6f}")
 
-experiment_antithetic(100, 100, .05, .2, 1)
+        if bench is not None:
+            print("  ->", "In range" if (lo <= bench <= hi) else "Out of range")
 
-
+run_experiment(mpc.discounted_payoffs_call, S0=100, K=100, r=0.05, sigma=0.2, T=1, seed=42, benchmark_fn=bs.bs_call_price, label="European Call Option")

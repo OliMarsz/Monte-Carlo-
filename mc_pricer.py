@@ -30,3 +30,8 @@ def discounted_payoffs_call_antithetic(S0, K, r, sigma, T, n_sims, seed=None):
 
     payoff = 0.5 * (pf.call_payoff(ST1, K) + pf.call_payoff(ST2, K))
     return np.exp(-r * T) * payoff
+
+def discounted_payoffs_asian_call(S0, K, r, sigma, T, n_sims, n_steps, seed=None):
+    paths = gbm.simulate_paths(S0, r, sigma, T, n_steps, n_sims, seed)
+    payoff = pf.asian_call_payoff(paths, K)
+    return np.exp(-r * T) * payoff
