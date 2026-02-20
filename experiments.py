@@ -10,7 +10,7 @@ def run_experiment(discounted_payoffs_fn, S0,
                    seed=None, lst=None, benchmark_fn=None,
                      label = "Confidence Interval",**kwargs):
     
-    #Use discounted_payoffs_fn to input rather normal or antithetic version
+    #Use discounted_payoffs_fn to input func such as european normal or antithetic version
     
     #Turn on benchmark for asian call options 
     
@@ -33,5 +33,3 @@ def run_experiment(discounted_payoffs_fn, S0,
 
         if bench is not None:
             print("  ->", "In range" if (lo <= bench <= hi) else "Out of range")
-
-run_experiment(mpc.discounted_payoffs_call, S0=100, K=100, r=0.05, sigma=0.2, T=1, seed=42, benchmark_fn=bs.bs_call_price, label="European Call Option")
