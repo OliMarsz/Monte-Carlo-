@@ -29,3 +29,20 @@ def sweep_mc(discounted_payoffs_fn, params: dict, n_list, seed=None, benchmark=N
             res["in_range"] = (res["ci_low"] <= benchmark <= res["ci_high"])
         out.append(res)
     return out
+
+def backtest_positions(*, paths, position_fn, cost=0.001, **params):
+   
+    close = paths
+    rets = close[:, 1:] / close[:, :-1] - 1.0       
+
+    pos = np.asarray(position_fn(close=close, rets=rets, **params), dtype=float)
+    if pos.shape != rets.shape:
+        raise ValueError(f"position_fn must return shape {rets.shape}, got {pos.shape}")
+
+    turnover = np.zeros_like(pos)
+    turnover[:, 1:] = np.abs(pos[:, 1:] - pos[:, :-1])
+
+    strat_rets = rets * pos - cost * turnover
+    equity = np.cumprod(1.0 + strat_rets, axis=1)
+
+    return {"returns": strat_rets, "equity": equity, "final_return": equity[:, -1] - 1.0, "position": pos}
