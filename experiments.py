@@ -43,6 +43,7 @@ def run_experiment(discounted_payoffs_fn, S0,
         if bench is not None:
             print("  ->", "In range" if (lo <= bench <= hi) else "Out of range")
 
+<<<<<<< Updated upstream
 S0, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
 
 run_experiment(
@@ -60,3 +61,6 @@ run_experiment(
     S0=S0, K=K, r=r, sigma=sigma, T=T,
     seed=123
 )
+=======
+            
+>>>>>>> Stashed changes
