@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 import gbm
 from matplotlib.colors import LogNorm
 
+"""
+Visualization functions for plotting GBM paths, 
+path density heatmaps, strategy equity density, and more.
+"""
+
 def plot_gbm_paths(S0, r, sigma, T, n_steps=252, n_sims=50, seed=1, title=None):
     paths = gbm.simulate_paths(S0, r, sigma, T, n_steps, n_sims, seed=seed)
     t = np.linspace(0, T, n_steps + 1)
@@ -59,4 +64,71 @@ def plot_path_density_heatmap( S0, r, sigma, T,  n_steps=252, n_sims=200_000, se
     plt.title(f"Path density (log-price, log-color), n={n_sims}")
     plt.show()
 
-plot_path_density_heatmap(S0=100, r=0.05, sigma=0.2, T=1, n_sims=200_000)
+def plot_hist(x, bins=80, title="Histogram"):
+    x = np.asarray(x)
+
+    plt.figure()
+    plt.hist(x, bins=bins)
+    plt.axvline(x.mean())
+    plt.title(f"{title} | mean={x.mean():.6f}")
+    plt.xlabel("value")
+    plt.ylabel("count")
+    plt.tight_layout()
+    plt.show()
+
+def plot_equity_density_heatmap(equity, *, bins_y=120, use_log_value=True,
+                                y_clip=(0.01, 0.99),  
+                                log_color=True,
+                                title="Strategy value density"):
+    
+    ###equity: (n_sims, n_steps+1)
+    
+    eq = np.asarray(equity, dtype=float)
+    if use_log_value:
+        y = np.log(np.maximum(eq, 1e-12))
+        y_label = "log(strategy value)"
+    else:
+        y = eq
+        y_label = "strategy value"
+
+    n_sims, n_pts = y.shape
+
+    lo, hi = np.quantile(y, y_clip)
+    y = np.clip(y, lo, hi)
+
+    t = np.tile(np.arange(n_pts), n_sims)
+    y_flat = y.reshape(-1)
+
+    H, xedges, yedges = np.histogram2d(t, y_flat, bins=[n_pts, bins_y])
+
+    plt.figure()
+    norm = LogNorm(vmin=1, vmax=H.max()) if log_color else None
+
+    plt.imshow(H.T, aspect="auto", origin="lower",
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]],
+               norm=norm)
+
+    plt.colorbar(label="count" + (" (log scale)" if log_color else ""))
+    plt.xlabel("time step")
+    plt.ylabel(y_label)
+    plt.title(title + f" | y_clip={y_clip}, bins_y={bins_y}")
+    plt.tight_layout()
+    plt.show()
+
+def plot_position_prob(position, title="P(position != 0) over time"):
+    pos = np.asarray(position)
+    active = (pos != 0).mean(axis=0)    
+    longp = (pos > 0).mean(axis=0)
+    shortp = (pos < 0).mean(axis=0)
+
+    plt.figure()
+    plt.plot(active, label="|pos|>0")
+    plt.plot(longp, label="pos>0")
+    plt.plot(shortp, label="pos<0")
+    plt.ylim(0, 1)
+    plt.xlabel("time step")
+    plt.ylabel("probability")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()

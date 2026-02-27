@@ -116,3 +116,4 @@ def gamma_fd_crn_call(*, S0, K, r, sigma, T, h, n_sims, seed=None):
     mid = price_european_call_mc_from_Z(S0=S0,     K=K, r=r, sigma=sigma, T=T, Z=Z)
     down = price_european_call_mc_from_Z(S0=S0 - h, K=K, r=r, sigma=sigma, T=T, Z=Z)
     return (up - 2 * mid + down) / (h * h)
+

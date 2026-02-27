@@ -1,5 +1,9 @@
 import numpy as np
 
+"""
+Payoff functions for various option types, used in MC_pricer and elsewhere.
+"""
+
 def call_payoff(ST, K):
     return np.maximum(ST - K, 0.0)
 

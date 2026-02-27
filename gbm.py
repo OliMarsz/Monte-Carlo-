@@ -1,5 +1,9 @@
 import numpy as np
 
+"""
+Geometric Brownian Motion simulation for stock price paths, 
+used in MC_pricer and elsewhere.
+"""
 
 def simulate_ST(S0, r, sigma, T, n_sims, seed=None):
 

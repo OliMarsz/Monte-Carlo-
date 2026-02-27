@@ -4,10 +4,14 @@ import black_scholes as bs
 import numpy as np
 import engine as eng
 import strategies as strat
+import visualize as vz 
+from Experiment_Bot.MTbot import MT_Model
+from mc_runner import MCRunner
 
 ### standard variable numbers for testing 
-S0, K, r, sigma, T, n_sims = 100, 100, 0.05, 0.2, 1.0, 200000
-n_steps, lookback, threshold, cost = 252, 20, 0.02, 0.001
+S0, K, r, sigma, T, n_sims = 100, 100, 0.05, 0.2, 1.0, 2000
+n_steps, lookback, threshold, cost, seed = 252, 20, 0.02, 0.0, 1
+sigma_hedge, sigma_true, steps_list = 0.2, 0.2, [12, 52, 252]
 
 def run_experiment_CI(discounted_payoffs_fn, S0,
                     K, r, sigma, T, 
@@ -75,11 +79,61 @@ def experiment_gamma(S0, K, r, sigma, T, n, h):
     print(f"BS Gamma      = {bs_gamma:.8f}")
     print(f"MC FD Gamma   = {mc_gamma:.8f} | Error = {abs(mc_gamma-bs_gamma):.8f}")
 
+def experiment_delta_hedge_sweep(S0_=S0, K_=K, r_=r, sigma_true_=sigma_true, T_=T, n_=n_sims,
+                                 sigma_hedge_=sigma_hedge, cost_=cost, steps_list_=steps_list, seed_=seed,
+                                 plot_steps=(12, 252)):
+
+    print("\n==== DELTA HEDGE: REBALANCE FREQUENCY SWEEP ====\n")
+    for steps in steps_list_:
+        paths = gbm.simulate_paths(S0_, r_, sigma_true_, T_, steps, n_, seed=seed_)
+        err = eng.delta_hedge_short_call(paths=paths, K=K_, r=r_,
+                                         sigma_hedge=sigma_hedge_, T=T_, cost=cost_)
+
+        print(f"steps={steps:>4} | mean={err.mean(): .6f} | std={err.std(ddof=1): .6f} | P(loss)={(err<0).mean(): .4f}")
+
+        if steps in plot_steps:
+            vz.plot_hist(err, title=f"Hedge error (short call) | steps={steps}, cost={cost_}")
+
+    m = err.mean()
+    sd = err.std(ddof=1)
+    p = (err < 0).mean()
+    q05, q50, q95 = np.quantile(err, [0.05, 0.50, 0.95])
+
+    print(f"mean={m: .6f} | sd={sd: .6f} | P(loss)={p: .4f} | q05={q05: .6f} | q50={q50: .6f} | q95={q95: .6f}")
 
 paths = gbm.simulate_paths(S0, r, sigma, T, n_steps, n_sims, seed=1)
-res = eng.backtest_positions(paths=paths, position_fn=strat.pos_momentum,
-                             cost=cost, lookback=lookback, threshold=threshold)
+initial_capital = 10000
 
-fr = res["final_return"]
-print("mean final return:", fr.mean())
-print("prob lose money :", (fr < 0).mean())
+runner = MCRunner(
+    bot_cls=MT_Model,
+    bot_kwargs=dict(symbol="FAKE", start_date="2020-01-01", end_date="2021-01-01",
+                    lookback_period=20, threshold=0.02),
+    entrypoint="run_complete_backtest",
+    apis=["yfinance.download"],
+    quiet=True
+)
+
+outs = runner.run_paths(paths, entry_kwargs={"initial_capital": initial_capital, "plot": False})
+
+equity = np.zeros((n_sims, n_steps + 1))
+equity[:, 0] = initial_capital
+
+pos = np.zeros((n_sims, n_steps))  # position held over each step
+
+for i, out in enumerate(outs):
+    sr = out["Strategy_Returns"]                  # pandas Series :contentReference[oaicite:1]{index=1}
+    rets = np.asarray(sr.fillna(0.0), dtype=float)
+    # ensure length matches n_steps (some strategies might return n_steps+1; adjust if needed)
+    rets = rets[:n_steps]
+    equity[i, 1:] = initial_capital * np.cumprod(1.0 + rets)
+
+    p = np.asarray(out["Position"].fillna(0.0), dtype=float)[:n_steps]
+    pos[i] = p
+
+
+vz.plot_equity_density_heatmap(
+    equity,
+    bins_y=90,
+    title="MT bot: strategy value density across MC sims")
+
+vz.plot_position_prob(pos, title="MT bot: P(in trade) over time")

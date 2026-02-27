@@ -1,5 +1,8 @@
 import numpy as np
 
+"""
+Example strategy implementations for testing and demonstration purposes."""
+
 def pos_momentum(*, close, lookback=20, threshold=0.02, **_):
     n_sims, n_pts = close.shape
     n_steps = n_pts - 1

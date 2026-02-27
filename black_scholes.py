@@ -4,6 +4,11 @@ import numpy as np
 import math
 from scipy.stats import norm
 
+'''
+Black-Scholes formulas for European call and put options, as well as delta and gamma.
+Note: these functions are not vectorized and are meant for single inputs. For vectorized versions, see engine.py.
+'''
+
 def norm_cdf(x):
     #Computes standard normal with error function implementation
     return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
