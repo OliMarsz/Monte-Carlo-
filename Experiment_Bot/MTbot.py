@@ -1,6 +1,5 @@
 '''
-Oliver Marszalek
-Begginer Momentum Trading Bot / Current Work in Progress
+This file is an old copy of my first bot project. Used for experiments in MC project. 
 '''
 
 import pandas as pd

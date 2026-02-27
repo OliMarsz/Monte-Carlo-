@@ -7,11 +7,17 @@ import strategies as strat
 import visualize as vz 
 from Experiment_Bot.MTbot import MT_Model
 from mc_runner import MCRunner
+from experiment_utils import run_bot_mc_and_plot
 
 ### standard variable numbers for testing 
 S0, K, r, sigma, T, n_sims = 100, 100, 0.05, 0.2, 1.0, 2000
 n_steps, lookback, threshold, cost, seed = 252, 20, 0.02, 0.0, 1
 sigma_hedge, sigma_true, steps_list = 0.2, 0.2, [12, 52, 252]
+initial_capital = 10000
+vol_list = [0.1, 0.2, 0.4]
+symbol, start_date, end_date = "FAKE", "2020-01-01", "2021-01-01"
+lookback_period, threshold = 20, 0.02
+entrypoint, apis, quiet = "run_complete_backtest", ["yfinance.download"], True
 
 def run_experiment_CI(discounted_payoffs_fn, S0,
                     K, r, sigma, T, 
@@ -101,39 +107,38 @@ def experiment_delta_hedge_sweep(S0_=S0, K_=K, r_=r, sigma_true_=sigma_true, T_=
 
     print(f"mean={m: .6f} | sd={sd: .6f} | P(loss)={p: .4f} | q05={q05: .6f} | q50={q50: .6f} | q95={q95: .6f}")
 
-paths = gbm.simulate_paths(S0, r, sigma, T, n_steps, n_sims, seed=1)
-initial_capital = 10000
 
-runner = MCRunner(
-    bot_cls=MT_Model,
-    bot_kwargs=dict(symbol="FAKE", start_date="2020-01-01", end_date="2021-01-01",
-                    lookback_period=20, threshold=0.02),
-    entrypoint="run_complete_backtest",
-    apis=["yfinance.download"],
-    quiet=True
-)
+def experiment_vol_sweep(S0_=S0, r_=r, T_=T, n_steps_=n_steps, n_sims_=n_sims, seed_=seed,
+                         initial_capital_=initial_capital, vol_list_=vol_list,
+                         lookback_period_=lookback_period, threshold_=threshold,
+                         entrypoint_=entrypoint, apis_=apis, quiet_=quiet,
+                         bins_y=120):
 
-outs = runner.run_paths(paths, entry_kwargs={"initial_capital": initial_capital, "plot": False})
+    for sigma_ in vol_list_:
+        paths = gbm.simulate_paths(S0_, r_, sigma_, T_, n_steps_, n_sims_, seed=seed_)
 
-equity = np.zeros((n_sims, n_steps + 1))
-equity[:, 0] = initial_capital
+        runner = MCRunner(
+            bot_cls=MT_Model,
+            bot_kwargs=dict(symbol=symbol, start_date=start_date, end_date=end_date,
+                            lookback_period=lookback_period_, threshold=threshold_),
+            entrypoint=entrypoint_,
+            apis=apis_,
+            quiet=quiet_
+        )
 
-pos = np.zeros((n_sims, n_steps))  # position held over each step
+        run_bot_mc_and_plot(
+            runner=runner,
+            paths=paths,
+            initial_capital=initial_capital_,
+            entry_kwargs={"initial_capital": initial_capital_, "plot": False},
+            returns_key="Strategy_Returns",
+            position_key="Position",
+            bins_y=bins_y,
+            equity_title=f"MT bot: equity density | sigma={sigma_}",
+            position_title=f"MT bot: P(in trade) | sigma={sigma_}"
+        )
 
-for i, out in enumerate(outs):
-    sr = out["Strategy_Returns"]                  # pandas Series :contentReference[oaicite:1]{index=1}
-    rets = np.asarray(sr.fillna(0.0), dtype=float)
-    # ensure length matches n_steps (some strategies might return n_steps+1; adjust if needed)
-    rets = rets[:n_steps]
-    equity[i, 1:] = initial_capital * np.cumprod(1.0 + rets)
 
-    p = np.asarray(out["Position"].fillna(0.0), dtype=float)[:n_steps]
-    pos[i] = p
+if __name__ == "__main__":
+    experiment_vol_sweep()
 
-
-vz.plot_equity_density_heatmap(
-    equity,
-    bins_y=90,
-    title="MT bot: strategy value density across MC sims")
-
-vz.plot_position_prob(pos, title="MT bot: P(in trade) over time")
