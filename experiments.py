@@ -108,23 +108,18 @@ def experiment_delta_hedge_sweep(S0_=S0, K_=K, r_=r, sigma_true_=sigma_true, T_=
     print(f"mean={m: .6f} | sd={sd: .6f} | P(loss)={p: .4f} | q05={q05: .6f} | q50={q50: .6f} | q95={q95: .6f}")
 
 
-def experiment_vol_sweep(S0_=S0, r_=r, T_=T, n_steps_=n_steps, n_sims_=n_sims, seed_=seed,
-                         initial_capital_=initial_capital, vol_list_=vol_list,
-                         lookback_period_=lookback_period, threshold_=threshold,
-                         entrypoint_=entrypoint, apis_=apis, quiet_=quiet,
+def experiment_vol_sweep(*,
+                         runner,
+                         S0_=S0, r_=r, T_=T,
+                         n_steps_=n_steps, n_sims_=n_sims,
+                         seed_=seed,
+                         initial_capital_=initial_capital,
+                         vol_list_=vol_list,
                          bins_y=120):
 
     for sigma_ in vol_list_:
-        paths = gbm.simulate_paths(S0_, r_, sigma_, T_, n_steps_, n_sims_, seed=seed_)
-
-        runner = MCRunner(
-            bot_cls=MT_Model,
-            bot_kwargs=dict(symbol=symbol, start_date=start_date, end_date=end_date,
-                            lookback_period=lookback_period_, threshold=threshold_),
-            entrypoint=entrypoint_,
-            apis=apis_,
-            quiet=quiet_
-        )
+        paths = gbm.simulate_paths(S0_, r_, sigma_, T_,
+                                   n_steps_, n_sims_, seed=seed_)
 
         run_bot_mc_and_plot(
             runner=runner,
@@ -133,12 +128,21 @@ def experiment_vol_sweep(S0_=S0, r_=r, T_=T, n_steps_=n_steps, n_sims_=n_sims, s
             entry_kwargs={"initial_capital": initial_capital_, "plot": False},
             returns_key="Strategy_Returns",
             position_key="Position",
-            bins_y=bins_y,
-            equity_title=f"MT bot: equity density | sigma={sigma_}",
-            position_title=f"MT bot: P(in trade) | sigma={sigma_}"
+            bins_y=bins_y
         )
 
-
 if __name__ == "__main__":
-    experiment_vol_sweep()
+    runner = MCRunner(
+        bot_cls=MT_Model,
+        bot_kwargs=dict(symbol=symbol,
+                        start_date=start_date,
+                        end_date=end_date,
+                        lookback_period=lookback_period,
+                        threshold=threshold),
+        entrypoint=entrypoint,
+        apis=apis,
+        quiet=quiet
+    )
+
+    experiment_vol_sweep(runner=runner)
 

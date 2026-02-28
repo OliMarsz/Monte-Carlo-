@@ -42,11 +42,10 @@ def run_bot_mc_and_plot(*, runner, paths, initial_capital=10000,
                         entry_kwargs=None,
                         returns_key="Strategy_Returns",
                         position_key="Position",
-                        bins_y=90,
-                        equity_title="Strategy value density across MC sims",
-                        position_title="P(in trade) over time"):
+                        bins_y=90):
    
-
+    equity_title="Strategy value density across MC sims"
+    position_title="P(in trade) over time"
     entry_kwargs = entry_kwargs or {}
     outs = runner.run_paths(paths, entry_kwargs=entry_kwargs)
 
@@ -65,7 +64,7 @@ def run_bot_mc_and_plot(*, runner, paths, initial_capital=10000,
         p = np.asarray(out[position_key].fillna(0.0), dtype=float)[:n_steps]
         pos[i] = p
 
-    vz.plot_equity_density_heatmap(equity, bins_y=bins_y, title=equity_title)
-    vz.plot_position_prob(pos, title=position_title)
+    vz.plot_equity_density_heatmap(equity, bins_y=bins_y)
+    vz.plot_position_prob(pos)
 
     return {"outs": outs, "equity": equity, "position": pos}
