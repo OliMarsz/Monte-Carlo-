@@ -30,9 +30,34 @@ def summarize_results(final_values, initial_capital=10000):
 
 def plot_final_values(final_values):
     plt.figure(figsize=(10, 6))
-    plt.hist(final_values, bins=60)
-    plt.axvline(final_values.mean(), linestyle="--", label="Mean")
-    plt.axvline(np.median(final_values), linestyle="--", label="Median")
+
+    plt.hist(
+        final_values,
+        bins=60,
+        alpha=0.75,
+        edgecolor="black",
+        label="Final values"
+    )
+
+    mean_value = final_values.mean()
+    median_value = np.median(final_values)
+
+    plt.axvline(
+        mean_value,
+        color="red",
+        linestyle="--",
+        linewidth=2.5,
+        label=f"Mean: {mean_value:,.2f}"
+    )
+
+    plt.axvline(
+        median_value,
+        color="orange",
+        linestyle="-.",
+        linewidth=2.5,
+        label=f"Median: {median_value:,.2f}"
+    )
+
     plt.title("Final Portfolio Value Across Monte Carlo Simulations")
     plt.xlabel("Final portfolio value")
     plt.ylabel("Count")
