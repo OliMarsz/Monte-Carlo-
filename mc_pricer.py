@@ -94,6 +94,8 @@ def delta_pathwise_call(*, S0, K, r, sigma, T, n_sims, seed=None):
     samples = np.exp(-r * T) * indicator * (ST / S0)
     return samples.mean()
 
+###Would've made IMC prosperity 4 easier if I finished this part earlier
+
 def price_european_call_mc_from_Z(*, S0, K, r, sigma, T, Z):
     ST = gbm.simulate_ST_from_Z(S0, r, sigma, T, Z)
     payoff = pf.call_payoff(ST, K)
