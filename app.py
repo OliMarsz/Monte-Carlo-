@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from option_runner import price_option
 
 import argparse
 import importlib.util
@@ -165,62 +166,93 @@ def parse_strategy_params(param_list):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run Monte Carlo simulations on a user-provided trading bot."
+        description="Run Monte Carlo simulations for trading bots or option pricing."
     )
 
-    parser.add_argument("--bot-file", type=str, required=True)
-    parser.add_argument("--bot-class", type=str, default=None)
-    parser.add_argument("--bot-function", type=str, default=None)
+    subparsers = parser.add_subparsers(dest="mode", required=True)
 
-    parser.add_argument("--params", nargs="*", default=[])
+    # Strategy mode
+    strategy_parser = subparsers.add_parser(
+        "strategy",
+        help="Run Monte Carlo simulation on a user-provided trading bot.",
+    )
 
-    parser.add_argument("--S0", type=float, default=100)
-    parser.add_argument("--r", type=float, default=0.05)
-    parser.add_argument("--sigma", type=float, default=0.20)
-    parser.add_argument("--T", type=float, default=1.0)
-    parser.add_argument("--n-steps", type=int, default=252)
-    parser.add_argument("--n-sims", type=int, default=1000)
-    parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--initial-capital", type=float, default=10000)
+    strategy_parser.add_argument("--bot-file", type=str, required=True)
+    strategy_parser.add_argument("--bot-class", type=str, default=None)
+    strategy_parser.add_argument("--bot-function", type=str, default=None)
+    strategy_parser.add_argument("--params", nargs="*", default=[])
 
-    parser.add_argument("--no-plots", action="store_true")
+    strategy_parser.add_argument("--S0", type=float, default=100)
+    strategy_parser.add_argument("--r", type=float, default=0.05)
+    strategy_parser.add_argument("--sigma", type=float, default=0.20)
+    strategy_parser.add_argument("--T", type=float, default=1.0)
+    strategy_parser.add_argument("--n-steps", type=int, default=252)
+    strategy_parser.add_argument("--n-sims", type=int, default=1000)
+    strategy_parser.add_argument("--seed", type=int, default=1)
+    strategy_parser.add_argument("--initial-capital", type=float, default=10000)
+
+    strategy_parser.add_argument("--no-plots", action="store_true")
+
+    # Option mode
+    option_parser = subparsers.add_parser(
+        "option",
+        help="Run Monte Carlo option pricing.",
+    )
+
+    option_parser.add_argument("--option-type", type=str, required=True)
+    option_parser.add_argument("--params", nargs="*", default=[])
 
     return parser.parse_args()
 
 
-##Test run
 if __name__ == "__main__":
     args = parse_args()
 
-    strategy = load_strategy_from_file(
-        bot_file=args.bot_file,
-        bot_class=args.bot_class,
-        bot_function=args.bot_function,
-    )
+    if args.mode == "strategy":
+        strategy = load_strategy_from_file(
+            bot_file=args.bot_file,
+            bot_class=args.bot_class,
+            bot_function=args.bot_function,
+        )
 
-    params = parse_strategy_params(args.params)
+        params = parse_strategy_params(args.params)
 
-    results = run_monte_carlo(
-        strategy=strategy,
-        params=params,
-        S0=args.S0,
-        r=args.r,
-        sigma=args.sigma,
-        T=args.T,
-        n_steps=args.n_steps,
-        n_sims=args.n_sims,
-        seed=args.seed,
-        initial_capital=args.initial_capital,
-        show_plots=False,
-    )
+        results = run_monte_carlo(
+            strategy=strategy,
+            params=params,
+            S0=args.S0,
+            r=args.r,
+            sigma=args.sigma,
+            T=args.T,
+            n_steps=args.n_steps,
+            n_sims=args.n_sims,
+            seed=args.seed,
+            initial_capital=args.initial_capital,
+            show_plots=False,
+        )
 
-    print("\n=== Monte Carlo Results ===")
-    print(f"Bot file: {args.bot_file}")
-    print(f"Strategy parameters: {params}")
+        print("\n=== Monte Carlo Strategy Results ===")
+        print(f"Bot file: {args.bot_file}")
+        print(f"Strategy parameters: {params}")
 
-    for key, value in results["stats"].items():
-        print(f"{key}: {value:.4f}")
+        for key, value in results["stats"].items():
+            print(f"{key}: {value:.4f}")
 
-    if not args.no_plots:
-        plot_sample_paths(results["paths"])
-        plot_final_values(results["final_values"])
+        if not args.no_plots:
+            plot_sample_paths(results["paths"])
+            plot_final_values(results["final_values"])
+
+    elif args.mode == "option":
+        params = parse_strategy_params(args.params)
+
+        results = price_option(
+            option_type=args.option_type,
+            params=params,
+        )
+
+        print("\n=== Monte Carlo Option Pricing Results ===")
+        print(f"Option type: {results['option_type']}")
+        print(f"Price estimate: {results['price']:.6f}")
+        print(f"95% CI: [{results['ci_low']:.6f}, {results['ci_high']:.6f}]")
+        print(f"CI width: {results['ci_width']:.6f}")
+        print(f"Samples used: {results['n_samples']}")
